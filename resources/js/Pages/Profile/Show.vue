@@ -1,8 +1,9 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, useForm, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { formatDate } from '@/utils/datetime'
+import Modal from '@/Components/Modal.vue'
 
 const props = defineProps({
   user: {
@@ -58,6 +59,20 @@ const currentStreakLabel = computed(() => {
     : 'поражений подряд'
   return `${n} ${tail}`
 })
+
+const isAvatarPreviewOpen = ref(false)
+const avatarPreviewUrl = ref('')
+
+const openAvatarPreview = (url) => {
+  if (!url) return
+  avatarPreviewUrl.value = url
+  isAvatarPreviewOpen.value = true
+}
+
+const closeAvatarPreview = () => {
+  isAvatarPreviewOpen.value = false
+  avatarPreviewUrl.value = ''
+}
 
 
 // === Форма профиля ===
@@ -202,12 +217,18 @@ const confirmDelete = () => {
 
               <div class="flex items-center gap-4">
                 <div class="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden">
-                  <img
+                  <button
                     v-if="user.avatar_url"
-                    :src="user.avatar_url"
-                    :alt="user.name"
-                    class="w-full h-full object-cover"
-                  />
+                    type="button"
+                    class="h-full w-full"
+                    @click="openAvatarPreview(user.avatar_url)"
+                  >
+                    <img
+                      :src="user.avatar_url"
+                      :alt="user.name"
+                      class="h-full w-full object-cover"
+                    />
+                  </button>
                   <span v-else class="text-xs text-gray-400 text-center px-2">
                     нет аватара
                   </span>
@@ -237,12 +258,18 @@ const confirmDelete = () => {
     <div class="mt-2 flex flex-col sm:flex-row gap-4 items-start">
       <!-- Аватар -->
       <div class="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden">
-        <img
+        <button
           v-if="user.avatar_url"
-          :src="user.avatar_url"
-          :alt="user.name"
-          class="w-full h-full object-cover"
-        />
+          type="button"
+          class="h-full w-full"
+          @click="openAvatarPreview(user.avatar_url)"
+        >
+          <img
+            :src="user.avatar_url"
+            :alt="user.name"
+            class="h-full w-full object-cover"
+          />
+        </button>
         <span v-else class="text-xs text-gray-400 text-center px-2">
           нет аватара
         </span>
@@ -267,6 +294,21 @@ const confirmDelete = () => {
     </div>
   </template>
         </section>
+
+        <Modal
+          :show="isAvatarPreviewOpen"
+          maxWidth="2xl"
+          @close="closeAvatarPreview"
+        >
+          <div class="bg-black p-4">
+            <img
+              v-if="avatarPreviewUrl"
+              :src="avatarPreviewUrl"
+              :alt="user.name"
+              class="mx-auto max-h-[80vh] w-auto max-w-full object-contain"
+            />
+          </div>
+        </Modal>
 		
 		
 		

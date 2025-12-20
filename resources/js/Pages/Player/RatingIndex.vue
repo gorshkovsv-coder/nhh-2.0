@@ -1,6 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
+import { ref } from 'vue'
+import Modal from '@/Components/Modal.vue'
 
 const props = defineProps({
   players: {
@@ -8,6 +10,23 @@ const props = defineProps({
     default: () => [],
   },
 })
+
+const isAvatarPreviewOpen = ref(false)
+const avatarPreviewUrl = ref('')
+const avatarPreviewName = ref('')
+
+const openAvatarPreview = (url, name) => {
+  if (!url) return
+  avatarPreviewUrl.value = url
+  avatarPreviewName.value = name || 'Аватар'
+  isAvatarPreviewOpen.value = true
+}
+
+const closeAvatarPreview = () => {
+  isAvatarPreviewOpen.value = false
+  avatarPreviewUrl.value = ''
+  avatarPreviewName.value = ''
+}
 </script>
 
 <template>
@@ -129,12 +148,18 @@ const props = defineProps({
                   <!-- Игрок -->
                   <td class="px-3 py-2 whitespace-nowrap">
                     <div class="flex items-center gap-3">
-                      <img
+                      <button
                         v-if="player.avatar_url"
-                        :src="player.avatar_url"
-                        alt=""
-                        class="h-8 w-8 rounded-full object-cover"
-                      />
+                        type="button"
+                        class="h-8 w-8 rounded-full"
+                        @click="openAvatarPreview(player.avatar_url, player.user_name)"
+                      >
+                        <img
+                          :src="player.avatar_url"
+                          :alt="player.user_name"
+                          class="h-8 w-8 rounded-full object-cover"
+                        />
+                      </button>
                       <div>
                         <div class="font-medium text-gray-900">
                           <Link
@@ -208,6 +233,21 @@ const props = defineProps({
             </table>
           </div>
         </div>
+
+        <Modal
+          :show="isAvatarPreviewOpen"
+          maxWidth="2xl"
+          @close="closeAvatarPreview"
+        >
+          <div class="bg-black p-4">
+            <img
+              v-if="avatarPreviewUrl"
+              :src="avatarPreviewUrl"
+              :alt="avatarPreviewName"
+              class="mx-auto max-h-[80vh] w-auto max-w-full object-contain"
+            />
+          </div>
+        </Modal>
       </div>
     </main>
   </AuthenticatedLayout>
