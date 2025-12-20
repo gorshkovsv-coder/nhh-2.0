@@ -389,7 +389,7 @@ const isAutoConfirmed = (m) => {
 					</div>
 
                   <!-- Статус матча (бейдж) -->
-                  <div class="flex flex-wrap items-center gap-2">
+                  <div class="mt-2 flex flex-wrap items-center gap-2">
                     <StatusBadge :status="m.status" />
 
                     <span
