@@ -1,9 +1,10 @@
 <script setup>
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import Modal from '@/Components/Modal.vue'
 
 const props = defineProps({
   canLogin: Boolean,
@@ -20,6 +21,20 @@ const isAdmin = computed(() => !!user.value?.is_admin)
 // На будущее: эти пропсы можно будет передавать из роута / контроллера
 const nextMatches = computed(() => page.props.nextMatches ?? [])
 const activeTournaments = computed(() => page.props.activeTournaments ?? [])
+
+const isAvatarPreviewOpen = ref(false)
+const avatarPreviewUrl = ref('')
+
+const openAvatarPreview = (url) => {
+  if (!url) return
+  avatarPreviewUrl.value = url
+  isAvatarPreviewOpen.value = true
+}
+
+const closeAvatarPreview = () => {
+  isAvatarPreviewOpen.value = false
+  avatarPreviewUrl.value = ''
+}
 </script>
 
 <template>
@@ -37,12 +52,18 @@ const activeTournaments = computed(() => page.props.activeTournaments ?? [])
             <div
               class="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
             >
-              <img
+              <button
                 v-if="user.avatar_url"
-                :src="user.avatar_url"
-                :alt="user.name"
-                class="w-full h-full object-cover"
-              />
+                type="button"
+                class="h-full w-full"
+                @click="openAvatarPreview(user.avatar_url)"
+              >
+                <img
+                  :src="user.avatar_url"
+                  :alt="user.name"
+                  class="h-full w-full object-cover"
+                />
+              </button>
               <span
                 v-else
                 class="text-lg font-semibold text-slate-500"
@@ -182,6 +203,21 @@ const activeTournaments = computed(() => page.props.activeTournaments ?? [])
             и запишись.
           </div>
         </section>
+
+        <Modal
+          :show="isAvatarPreviewOpen"
+          maxWidth="2xl"
+          @close="closeAvatarPreview"
+        >
+          <div class="bg-black p-4">
+            <img
+              v-if="avatarPreviewUrl"
+              :src="avatarPreviewUrl"
+              :alt="user?.name ?? 'avatar'"
+              class="mx-auto max-h-[80vh] w-auto max-w-full object-contain"
+            />
+          </div>
+        </Modal>
 
         <!-- Ближайший матч -->
 <section class="bg-white shadow-sm sm:rounded-lg p-6">
