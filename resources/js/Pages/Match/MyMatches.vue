@@ -281,7 +281,9 @@ const isAutoConfirmed = (m) => {
                             ? 'Запланирован'
                             : s === 'confirmed'
                               ? 'Подтверждён'
-                              : s }}
+                              : s === 'canceled'
+                                ? 'Отменён'
+                                : s }}
                     </option>
                   </select>
                 </div>
