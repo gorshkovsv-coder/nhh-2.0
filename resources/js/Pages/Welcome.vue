@@ -256,7 +256,7 @@ const playerResultClass = (side, match) => {
             <div
               v-for="m in lastMatches"
               :key="m.id"
-              class="border rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+              class="border rounded-lg p-4 flex flex-col gap-3"
             >
               <div class="min-w-0">
                 <p class="text-sm text-gray-500">
@@ -265,12 +265,12 @@ const playerResultClass = (side, match) => {
                 <p class="text-base font-semibold text-gray-900">
                   {{ m.tournament_name }}
                 </p>
-                <p class="text-xs text-gray-500 mt-2">
+                <p class="text-xs text-gray-500">
                   Стадия: {{ m.stage_name }}
                 </p>
               </div>
 
-              <div class="flex-1 min-w-0">
+              <div class="min-w-0">
                 <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">
                   Результат
                 </p>
@@ -382,7 +382,7 @@ const playerResultClass = (side, match) => {
     <div
       v-for="m in nextMatches"
       :key="m.id"
-      class="border rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+      class="border rounded-lg p-4 flex flex-col gap-3"
     >
       <div class="min-w-0">
         <p class="text-sm text-gray-500">
@@ -391,7 +391,7 @@ const playerResultClass = (side, match) => {
         <p class="text-base font-semibold text-gray-900">
           {{ m.tournament_name }}
         </p>
-        <p class="text-xs text-gray-500 mt-2">
+        <p class="text-xs text-gray-500">
           Стадия: {{ m.stage_name }}
         </p>
       </div>
