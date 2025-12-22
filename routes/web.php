@@ -39,6 +39,7 @@ Route::get('/', function () {
     $user = auth()->user();
 
 	$nextMatches = [];
+	$lastMatches = [];
 	$activeTournaments = [];
 
     if ($user) {
@@ -159,6 +160,70 @@ if (!$tournamentName) {
 
 }
 
+		// ===== Последние игры (последние 5 сыгранных/оспариваемых) =====
+		$rawLastMatches = MatchModel::query()
+			->with([
+				'stage.tournament',
+				'home.user', 'home.nhlTeam', 'home.tournament',
+				'away.user', 'away.nhlTeam', 'away.tournament',
+				'reports' => function ($q) {
+					$q->latest('created_at');
+				},
+			])
+			->where(function ($q) use ($userId) {
+				$q->whereHas('home', function ($q2) use ($userId) {
+					$q2->where('user_id', $userId);
+				})->orWhereHas('away', function ($q2) use ($userId) {
+					$q2->where('user_id', $userId);
+				});
+			})
+			->whereIn('status', ['confirmed', 'reported', 'disputed'])
+			->orderByRaw('COALESCE(confirmed_at, updated_at, created_at) DESC')
+			->take(5)
+			->get();
+
+		if ($rawLastMatches->isNotEmpty()) {
+			$lastMatches = $rawLastMatches->map(function (MatchModel $match) {
+				$statusLabel = match ($match->status) {
+					'confirmed' => 'Подтверждён',
+					'reported'  => 'Ожидает подтверждения',
+					'disputed'  => 'Спор',
+					default     => null,
+				};
+
+				$stage    = $match->stage;
+				$homePart = $match->home;
+				$awayPart = $match->away;
+
+				$tournament =
+					$stage?->tournament
+					?? $homePart?->tournament
+					?? $awayPart?->tournament
+					?? null;
+
+				$tournamentName = $tournament?->title
+					?? $tournament?->name
+					?? 'Турнир';
+
+				$report = $match->reports?->first();
+
+				return [
+					'id'              => $match->id,
+					'tournament_name' => $tournamentName,
+					'stage_name'      => $stage?->name ?? 'Стадия',
+					'status_label'    => $statusLabel,
+					'score_home'      => $match->score_home ?? $report?->score_home,
+					'score_away'      => $match->score_away ?? $report?->score_away,
+					'home_team_logo_url' => $homePart?->nhlTeam?->logo_url,
+					'home_team_name'     => $homePart?->nhlTeam?->name,
+					'home_player_name'   => $homePart?->user?->name,
+					'away_team_logo_url' => $awayPart?->nhlTeam?->logo_url,
+					'away_team_name'     => $awayPart?->nhlTeam?->name,
+					'away_player_name'   => $awayPart?->user?->name,
+				];
+			})->values()->all();
+		}
+
 
         // ===== Мои турниры (последние 5) =====
         $myTournaments = Tournament::query()
@@ -231,6 +296,7 @@ $activeTournaments = $myTournaments->map(function (Tournament $t) use ($userId) 
         'phpVersion'       => PHP_VERSION,
         // Новые пропсы для дашборда
         'nextMatches'       => $nextMatches,
+        'lastMatches'       => $lastMatches,
         'activeTournaments'=> $activeTournaments,
     ]);
 })->name('home');
