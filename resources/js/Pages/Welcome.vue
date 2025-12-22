@@ -274,8 +274,8 @@ const playerResultClass = (side, match) => {
                 <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">
                   Результат
                 </p>
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-                  <div class="flex items-center gap-2 w-full min-w-0 sm:flex-1">
+                <div class="flex items-center gap-4">
+                  <div class="flex items-center gap-2 min-w-0">
                     <div
                       class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
                     >
@@ -293,11 +293,11 @@ const playerResultClass = (side, match) => {
                       </span>
                     </div>
                     <div class="min-w-0">
-                      <p class="text-xs font-semibold text-gray-900 break-words whitespace-normal">
+                      <p class="text-xs font-semibold text-gray-900 truncate">
                         {{ m.home_team_name || 'HOME' }}
                       </p>
                       <p
-                        class="text-[11px] break-words whitespace-normal"
+                        class="text-[11px] truncate"
                         :class="playerResultClass('home', m)"
                       >
                         {{ m.home_player_name || 'Игрок' }}
@@ -305,11 +305,11 @@ const playerResultClass = (side, match) => {
                     </div>
                   </div>
 
-                  <div class="text-sm font-semibold text-gray-900 sm:px-2 sm:text-base self-start sm:self-auto">
+                  <div class="text-sm font-semibold text-gray-900">
                     {{ scoreLabel(m) }}
                   </div>
 
-                  <div class="flex items-center gap-2 w-full min-w-0 sm:flex-1">
+                  <div class="flex items-center gap-2 min-w-0">
                     <div
                       class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
                     >
@@ -327,11 +327,11 @@ const playerResultClass = (side, match) => {
                       </span>
                     </div>
                     <div class="min-w-0">
-                      <p class="text-xs font-semibold text-gray-900 break-words whitespace-normal">
+                      <p class="text-xs font-semibold text-gray-900 truncate">
                         {{ m.away_team_name || 'AWAY' }}
                       </p>
                       <p
-                        class="text-[11px] break-words whitespace-normal"
+                        class="text-[11px] truncate"
                         :class="playerResultClass('away', m)"
                       >
                         {{ m.away_player_name || 'Игрок' }}
