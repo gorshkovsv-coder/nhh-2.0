@@ -20,6 +20,7 @@ const isAdmin = computed(() => !!user.value?.is_admin)
 
 // На будущее: эти пропсы можно будет передавать из роута / контроллера
 const nextMatches = computed(() => page.props.nextMatches ?? [])
+const lastMatches = computed(() => page.props.lastMatches ?? [])
 const activeTournaments = computed(() => page.props.activeTournaments ?? [])
 
 const isAvatarPreviewOpen = ref(false)
@@ -34,6 +35,24 @@ const openAvatarPreview = (url) => {
 const closeAvatarPreview = () => {
   isAvatarPreviewOpen.value = false
   avatarPreviewUrl.value = ''
+}
+
+const scoreLabel = (match) => {
+  if (match?.score_home === null || match?.score_home === undefined) return '—'
+  if (match?.score_away === null || match?.score_away === undefined) return '—'
+  return `${match.score_home} : ${match.score_away}`
+}
+
+const playerResultClass = (side, match) => {
+  const home = match?.score_home
+  const away = match?.score_away
+
+  if (home === null || home === undefined) return 'text-gray-700'
+  if (away === null || away === undefined) return 'text-gray-700'
+  if (home === away) return 'text-gray-700'
+
+  const isWinner = side === 'home' ? home > away : away > home
+  return isWinner ? 'text-emerald-700' : 'text-rose-600'
 }
 </script>
 
@@ -219,6 +238,131 @@ const closeAvatarPreview = () => {
           </div>
         </Modal>
 
+        <!-- Последние игры -->
+        <section class="bg-white shadow-sm sm:rounded-lg p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">
+              Последние игры
+            </h2>
+            <Link
+              href="/my/matches"
+              class="text-xs text-slate-600 hover:text-slate-900"
+            >
+              Все матчи
+            </Link>
+          </div>
+
+          <div v-if="lastMatches.length" class="space-y-3">
+            <div
+              v-for="m in lastMatches"
+              :key="m.id"
+              class="border rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+            >
+              <div>
+                <p class="text-sm text-gray-500">
+                  Турнир
+                </p>
+                <p class="text-base font-semibold text-gray-900">
+                  {{ m.tournament_name }}
+                </p>
+                <p class="text-xs text-gray-500 mt-2">
+                  Стадия: {{ m.stage_name }}
+                </p>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                  Результат
+                </p>
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                  <div class="flex items-center gap-2 w-full min-w-0 sm:flex-1">
+                    <div
+                      class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
+                    >
+                      <img
+                        v-if="m.home_team_logo_url"
+                        :src="m.home_team_logo_url"
+                        alt=""
+                        class="w-full h-full object-cover"
+                      />
+                      <span
+                        v-else
+                        class="text-[11px] font-semibold text-slate-500"
+                      >
+                        ?
+                      </span>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-xs font-semibold text-gray-900 break-words whitespace-normal">
+                        {{ m.home_team_name || 'HOME' }}
+                      </p>
+                      <p
+                        class="text-[11px] break-words whitespace-normal"
+                        :class="playerResultClass('home', m)"
+                      >
+                        {{ m.home_player_name || 'Игрок' }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="text-sm font-semibold text-gray-900 sm:px-2 sm:text-base self-start sm:self-auto">
+                    {{ scoreLabel(m) }}
+                  </div>
+
+                  <div class="flex items-center gap-2 w-full min-w-0 sm:flex-1">
+                    <div
+                      class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
+                    >
+                      <img
+                        v-if="m.away_team_logo_url"
+                        :src="m.away_team_logo_url"
+                        alt=""
+                        class="w-full h-full object-cover"
+                      />
+                      <span
+                        v-else
+                        class="text-[11px] font-semibold text-slate-500"
+                      >
+                        ?
+                      </span>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-xs font-semibold text-gray-900 break-words whitespace-normal">
+                        {{ m.away_team_name || 'AWAY' }}
+                      </p>
+                      <p
+                        class="text-[11px] break-words whitespace-normal"
+                        :class="playerResultClass('away', m)"
+                      >
+                        {{ m.away_player_name || 'Игрок' }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-col items-start md:items-end gap-2">
+                <p v-if="m.status_label" class="text-xs text-gray-500">
+                  {{ m.status_label }}
+                </p>
+                <Link
+                  :href="`/matches/${m.id}`"
+                  class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-slate-800"
+                >
+                  Открыть матч
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-else
+            class="border border-dashed border-slate-200 rounded-lg p-4 text-sm text-gray-600"
+          >
+            У тебя пока нет сыгранных матчей. Когда появятся результаты, последние игры будут здесь.
+          </div>
+        </section>
+
         <!-- Ближайший матч -->
 <section class="bg-white shadow-sm sm:rounded-lg p-6">
   <div class="flex items-center justify-between mb-4">
@@ -256,9 +400,9 @@ const closeAvatarPreview = () => {
   <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">
     Пара матча
   </p>
-  <div class="flex items-center gap-4">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
     <!-- Хозяева -->
-    <div class="flex items-center gap-2 min-w-0">
+    <div class="flex items-center gap-2 min-w-0 sm:flex-1">
       <div
         class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
       >
@@ -276,21 +420,21 @@ const closeAvatarPreview = () => {
         </span>
       </div>
       <div class="min-w-0">
-        <p class="text-xs font-semibold text-gray-900">
+        <p class="text-xs font-semibold text-gray-900 break-words">
           {{ m.home_team_code || 'HOME' }}
         </p>
-        <p class="text-[11px] text-gray-500 truncate">
+        <p class="text-[11px] text-gray-500 break-words">
           {{ m.home_player_name || 'Игрок' }}
         </p>
       </div>
     </div>
 
-    <span class="text-xs font-semibold text-gray-500">
+    <span class="text-xs font-semibold text-gray-500 sm:px-2">
       vs
     </span>
 
     <!-- Гости -->
-    <div class="flex items-center gap-2 min-w-0">
+    <div class="flex items-center gap-2 min-w-0 sm:flex-1">
       <div
         class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
       >
@@ -308,10 +452,10 @@ const closeAvatarPreview = () => {
         </span>
       </div>
       <div class="min-w-0">
-        <p class="text-xs font-semibold text-gray-900">
+        <p class="text-xs font-semibold text-gray-900 break-words">
           {{ m.away_team_code || 'AWAY' }}
         </p>
-        <p class="text-[11px] text-gray-500 truncate">
+        <p class="text-[11px] text-gray-500 break-words">
           {{ m.away_player_name || 'Игрок' }}
         </p>
       </div>
