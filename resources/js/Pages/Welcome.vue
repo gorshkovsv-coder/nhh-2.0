@@ -293,7 +293,7 @@ const playerResultClass = (side, match) => {
                       </span>
                     </div>
                     <div class="min-w-0">
-                      <p class="text-xs font-semibold text-gray-900">
+                      <p class="text-xs font-semibold text-gray-900 break-words">
                         {{ m.home_team_name || 'HOME' }}
                       </p>
                       <p
@@ -327,7 +327,7 @@ const playerResultClass = (side, match) => {
                       </span>
                     </div>
                     <div class="min-w-0">
-                      <p class="text-xs font-semibold text-gray-900">
+                      <p class="text-xs font-semibold text-gray-900 break-words">
                         {{ m.away_team_name || 'AWAY' }}
                       </p>
                       <p
