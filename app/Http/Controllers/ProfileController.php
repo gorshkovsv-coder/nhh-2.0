@@ -14,6 +14,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use App\Services\PlayerStatsService;
 use App\Models\User;
+use App\Models\MatchModel;
 
 class ProfileController extends Controller
 {
@@ -32,12 +33,14 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $stats = $playerStats->buildStatsForUser($user->id);
+        $lastMatches = $this->buildLastMatches($user->id);
 
         return Inertia::render('Profile/Show', [
             'user'            => $user,
             'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status'          => session('status'),
             'playerStats'     => $stats,
+			'lastMatches'     => $lastMatches,
 			'isOwner'         => true,
         ]);
     }
@@ -48,14 +51,84 @@ class ProfileController extends Controller
     public function showPublic(User $user, PlayerStatsService $playerStats): Response
     {
         $stats = $playerStats->buildStatsForUser($user->id);
+        $lastMatches = $this->buildLastMatches($user->id);
 
         return Inertia::render('Profile/Show', [
             'user'            => $user,
             'mustVerifyEmail' => false,
             'status'          => null,
             'playerStats'     => $stats,
+            'lastMatches'     => $lastMatches,
             'isOwner'         => auth()->check() && auth()->id() === $user->id,
         ]);
+    }
+
+    private function buildLastMatches(int $userId): array
+    {
+        $rawLastMatches = MatchModel::query()
+            ->with([
+                'stage.tournament',
+                'home.user', 'home.nhlTeam', 'home.tournament',
+                'away.user', 'away.nhlTeam', 'away.tournament',
+                'reports' => function ($q) {
+                    $q->latest('created_at');
+                },
+            ])
+            ->where(function ($q) use ($userId) {
+                $q->whereHas('home', function ($q2) use ($userId) {
+                    $q2->where('user_id', $userId);
+                })->orWhereHas('away', function ($q2) use ($userId) {
+                    $q2->where('user_id', $userId);
+                });
+            })
+            ->whereIn('status', ['confirmed', 'reported', 'disputed'])
+            ->orderByRaw('COALESCE(confirmed_at, updated_at, created_at) DESC')
+            ->take(10)
+            ->get();
+
+        if ($rawLastMatches->isEmpty()) {
+            return [];
+        }
+
+        return $rawLastMatches->map(function (MatchModel $match) {
+            $statusLabel = match ($match->status) {
+                'confirmed' => 'Подтверждён',
+                'reported'  => 'Ожидает подтверждения',
+                'disputed'  => 'Спор',
+                default     => null,
+            };
+
+            $stage    = $match->stage;
+            $homePart = $match->home;
+            $awayPart = $match->away;
+
+            $tournament =
+                $stage?->tournament
+                ?? $homePart?->tournament
+                ?? $awayPart?->tournament
+                ?? null;
+
+            $tournamentName = $tournament?->title
+                ?? $tournament?->name
+                ?? 'Турнир';
+
+            $report = $match->reports?->first();
+
+            return [
+                'id'              => $match->id,
+                'tournament_name' => $tournamentName,
+                'stage_name'      => $stage?->name ?? 'Стадия',
+                'status_label'    => $statusLabel,
+                'score_home'      => $match->score_home ?? $report?->score_home,
+                'score_away'      => $match->score_away ?? $report?->score_away,
+                'home_team_logo_url' => $homePart?->nhlTeam?->logo_url,
+                'home_team_name'     => $homePart?->nhlTeam?->name,
+                'home_player_name'   => $homePart?->user?->name,
+                'away_team_logo_url' => $awayPart?->nhlTeam?->logo_url,
+                'away_team_name'     => $awayPart?->nhlTeam?->name,
+                'away_player_name'   => $awayPart?->user?->name,
+            ];
+        })->values()->all();
     }
 
 
