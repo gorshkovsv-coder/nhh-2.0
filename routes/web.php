@@ -150,10 +150,12 @@ if (!$tournamentName) {
         // данные для отображения логотипов и текста
         'home_team_logo_url' => $homeTeam?->logo_url,
         'home_team_code'     => $homeTeam?->code,
+		'home_team_name'     => $homeTeam?->name,
         'home_player_name'   => $homeUser?->name,
 
         'away_team_logo_url' => $awayTeam?->logo_url,
         'away_team_code'     => $awayTeam?->code,
+		'away_team_name'     => $awayTeam?->name,
         'away_player_name'   => $awayUser?->name,
     ];
 })->values()->all();
