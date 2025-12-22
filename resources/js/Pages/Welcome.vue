@@ -409,12 +409,12 @@ const playerResultClass = (side, match) => {
                 v-else
                 class="text-[11px] font-semibold text-slate-500"
               >
-                {{ m.home_team_code || '?' }}
+                {{ m.home_team_name || '?' }}
               </span>
             </div>
             <div class="min-w-0">
               <p class="text-xs font-semibold text-gray-900 break-words leading-tight">
-                {{ m.home_team_code || 'HOME' }}
+                {{ m.home_team_name || 'HOME' }}
               </p>
               <p class="text-[11px] text-gray-500 break-words leading-tight">
                 {{ m.home_player_name || 'Игрок' }}
@@ -429,7 +429,7 @@ const playerResultClass = (side, match) => {
           <div class="flex items-center gap-2 min-w-0 sm:flex-row-reverse sm:text-right">
             <div class="min-w-0">
               <p class="text-xs font-semibold text-gray-900 break-words leading-tight">
-                {{ m.away_team_code || 'AWAY' }}
+                {{ m.away_team_name || 'AWAY' }}
               </p>
               <p class="text-[11px] text-gray-500 break-words leading-tight">
                 {{ m.away_player_name || 'Игрок' }}
@@ -448,7 +448,7 @@ const playerResultClass = (side, match) => {
                 v-else
                 class="text-[11px] font-semibold text-slate-500"
               >
-                {{ m.away_team_code || '?' }}
+                {{ m.away_team_name || '?' }}
               </span>
             </div>
           </div>
