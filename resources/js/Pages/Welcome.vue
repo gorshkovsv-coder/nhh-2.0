@@ -400,9 +400,9 @@ const playerResultClass = (side, match) => {
   <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">
     Пара матча
   </p>
-  <div class="flex items-center gap-4">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
     <!-- Хозяева -->
-    <div class="flex items-center gap-2 min-w-0">
+    <div class="flex items-center gap-2 min-w-0 sm:flex-1">
       <div
         class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
       >
@@ -420,21 +420,21 @@ const playerResultClass = (side, match) => {
         </span>
       </div>
       <div class="min-w-0">
-        <p class="text-xs font-semibold text-gray-900">
+        <p class="text-xs font-semibold text-gray-900 break-words">
           {{ m.home_team_code || 'HOME' }}
         </p>
-        <p class="text-[11px] text-gray-500 truncate">
+        <p class="text-[11px] text-gray-500 break-words">
           {{ m.home_player_name || 'Игрок' }}
         </p>
       </div>
     </div>
 
-    <span class="text-xs font-semibold text-gray-500">
+    <span class="text-xs font-semibold text-gray-500 sm:px-2">
       vs
     </span>
 
     <!-- Гости -->
-    <div class="flex items-center gap-2 min-w-0">
+    <div class="flex items-center gap-2 min-w-0 sm:flex-1">
       <div
         class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
       >
@@ -452,10 +452,10 @@ const playerResultClass = (side, match) => {
         </span>
       </div>
       <div class="min-w-0">
-        <p class="text-xs font-semibold text-gray-900">
+        <p class="text-xs font-semibold text-gray-900 break-words">
           {{ m.away_team_code || 'AWAY' }}
         </p>
-        <p class="text-[11px] text-gray-500 truncate">
+        <p class="text-[11px] text-gray-500 break-words">
           {{ m.away_player_name || 'Игрок' }}
         </p>
       </div>
