@@ -230,6 +230,7 @@ if (!$tournamentName) {
         // ===== Мои турниры (последние 5) =====
         $myTournaments = Tournament::query()
             ->with(['participants.nhlTeam'])
+            ->where('status', 'active')
             ->whereHas('participants', function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             })
