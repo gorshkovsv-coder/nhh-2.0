@@ -256,10 +256,13 @@ const playerResultClass = (side, match) => {
             <div
               v-for="m in lastMatches"
               :key="m.id"
-              class="border rounded-lg p-4 flex flex-col gap-4"
+              class="border rounded-lg p-4 flex flex-col gap-3"
             >
               <div class="min-w-0">
-                <p class="text-sm font-semibold text-gray-900">
+                <p class="text-sm text-gray-500">
+                  Турнир
+                </p>
+                <p class="text-base font-semibold text-gray-900">
                   {{ m.tournament_name }}
                 </p>
                 <p class="text-xs text-gray-500">
@@ -268,11 +271,11 @@ const playerResultClass = (side, match) => {
               </div>
 
               <div class="min-w-0">
-                <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">
+                <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">
                   Результат
                 </p>
-                <div class="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-3">
-                  <div class="flex items-center gap-2 min-w-0">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                  <div class="flex items-center gap-2 min-w-0 sm:flex-1">
                     <div
                       class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
                     >
@@ -290,11 +293,11 @@ const playerResultClass = (side, match) => {
                       </span>
                     </div>
                     <div class="min-w-0">
-                      <p class="text-xs font-semibold text-gray-900 break-words leading-tight">
+                      <p class="text-xs font-semibold text-gray-900 break-words">
                         {{ m.home_team_name || 'HOME' }}
                       </p>
                       <p
-                        class="text-[11px] break-words leading-tight"
+                        class="text-[11px] break-words"
                         :class="playerResultClass('home', m)"
                       >
                         {{ m.home_player_name || 'Игрок' }}
@@ -302,22 +305,11 @@ const playerResultClass = (side, match) => {
                     </div>
                   </div>
 
-                  <div class="text-sm font-semibold text-gray-900 text-center">
+                  <div class="text-sm font-semibold text-gray-900 sm:px-2">
                     {{ scoreLabel(m) }}
                   </div>
 
-                  <div class="flex items-center gap-2 min-w-0 sm:justify-end sm:text-right">
-                    <div class="min-w-0">
-                      <p class="text-xs font-semibold text-gray-900 break-words leading-tight">
-                        {{ m.away_team_name || 'AWAY' }}
-                      </p>
-                      <p
-                        class="text-[11px] break-words leading-tight"
-                        :class="playerResultClass('away', m)"
-                      >
-                        {{ m.away_player_name || 'Игрок' }}
-                      </p>
-                    </div>
+                  <div class="flex items-center gap-2 min-w-0 sm:flex-1">
                     <div
                       class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
                     >
@@ -334,17 +326,28 @@ const playerResultClass = (side, match) => {
                         ?
                       </span>
                     </div>
+                    <div class="min-w-0">
+                      <p class="text-xs font-semibold text-gray-900 break-words">
+                        {{ m.away_team_name || 'AWAY' }}
+                      </p>
+                      <p
+                        class="text-[11px] break-words"
+                        :class="playerResultClass('away', m)"
+                      >
+                        {{ m.away_player_name || 'Игрок' }}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div class="flex flex-col items-start md:items-end gap-2 w-full md:w-auto">
                 <p v-if="m.status_label" class="text-xs text-gray-500">
                   {{ m.status_label }}
                 </p>
                 <Link
                   :href="`/matches/${m.id}`"
-                  class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-slate-800"
+                  class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 w-full md:w-auto"
                 >
                   Открыть матч
                 </Link>
@@ -379,10 +382,13 @@ const playerResultClass = (side, match) => {
     <div
       v-for="m in nextMatches"
       :key="m.id"
-      class="border rounded-lg p-4 flex flex-col gap-4"
+      class="border rounded-lg p-4 flex flex-col gap-3"
     >
       <div class="min-w-0">
-        <p class="text-sm font-semibold text-gray-900">
+        <p class="text-sm text-gray-500">
+          Турнир
+        </p>
+        <p class="text-base font-semibold text-gray-900">
           {{ m.tournament_name }}
         </p>
         <p class="text-xs text-gray-500">
@@ -390,12 +396,13 @@ const playerResultClass = (side, match) => {
         </p>
       </div>
 
-      <div class="min-w-0">
-        <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">
+      <div class="flex-1 min-w-0">
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">
           Пара матча
         </p>
-        <div class="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-3">
-          <div class="flex items-center gap-2 min-w-0">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <!-- Хозяева -->
+          <div class="flex items-center gap-2 min-w-0 sm:flex-1">
             <div
               class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
             >
@@ -413,28 +420,21 @@ const playerResultClass = (side, match) => {
               </span>
             </div>
             <div class="min-w-0">
-              <p class="text-xs font-semibold text-gray-900 break-words leading-tight">
+              <p class="text-xs font-semibold text-gray-900 break-words">
                 {{ m.home_team_code || 'HOME' }}
               </p>
-              <p class="text-[11px] text-gray-500 break-words leading-tight">
+              <p class="text-[11px] text-gray-500 break-words">
                 {{ m.home_player_name || 'Игрок' }}
               </p>
             </div>
           </div>
 
-          <span class="text-xs font-semibold text-gray-500 text-center">
+          <span class="text-xs font-semibold text-gray-500 sm:px-2">
             vs
           </span>
 
-          <div class="flex items-center gap-2 min-w-0 sm:justify-end sm:text-right">
-            <div class="min-w-0">
-              <p class="text-xs font-semibold text-gray-900 break-words leading-tight">
-                {{ m.away_team_code || 'AWAY' }}
-              </p>
-              <p class="text-[11px] text-gray-500 break-words leading-tight">
-                {{ m.away_player_name || 'Игрок' }}
-              </p>
-            </div>
+          <!-- Гости -->
+          <div class="flex items-center gap-2 min-w-0 sm:flex-1">
             <div
               class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden"
             >
@@ -451,17 +451,25 @@ const playerResultClass = (side, match) => {
                 {{ m.away_team_code || '?' }}
               </span>
             </div>
+            <div class="min-w-0">
+              <p class="text-xs font-semibold text-gray-900 break-words">
+                {{ m.away_team_code || 'AWAY' }}
+              </p>
+              <p class="text-[11px] text-gray-500 break-words">
+                {{ m.away_player_name || 'Игрок' }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col items-start md:items-end gap-2 w-full md:w-auto">
         <p v-if="m.status_label" class="text-xs text-gray-500">
           {{ m.status_label }}
         </p>
         <Link
           :href="`/matches/${m.id}`"
-          class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-slate-800"
+          class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 w-full md:w-auto"
         >
           Открыть матч
         </Link>
