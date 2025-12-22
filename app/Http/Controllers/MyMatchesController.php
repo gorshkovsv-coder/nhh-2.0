@@ -14,19 +14,22 @@ class MyMatchesController extends Controller
         $participantIds = TournamentParticipant::where('user_id', $userId)->pluck('id')->toArray();
 
 		$matches = MatchModel::with([
-        'stage.tournament',
-        'home.user',
-        'home.nhlTeam',   // <-- добавили
-        'away.user',
-        'away.nhlTeam',   // <-- добавили
-        'reports' => function ($q) {
-            $q->latest();
-        },
+			'stage.tournament',
+			'home.user',
+			'home.nhlTeam',
+			'away.user',
+			'away.nhlTeam',
+			'reports' => function ($q) {
+				$q->latest();
+			},
 			])
-			->whereIn('home_participant_id', $participantIds)
-			->orWhereIn('away_participant_id', $participantIds)
+			->where(function ($q) use ($participantIds) {
+				$q->whereIn('home_participant_id', $participantIds)
+					->orWhereIn('away_participant_id', $participantIds);
+			})
 			->orderByRaw('COALESCE(scheduled_at, created_at) DESC')
-			->get();
+			->paginate(20)
+			->withQueryString();
 		
 		return Inertia::render('Match/MyMatches', [
             'matches' => $matches,

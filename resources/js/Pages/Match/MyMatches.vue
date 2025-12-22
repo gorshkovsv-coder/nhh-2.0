@@ -5,7 +5,10 @@ import { Head, Link, usePage } from '@inertiajs/vue3'
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 
 const props = defineProps({
-  matches: { type: Array, required: true }, // массив матчей
+  matches: {
+    type: [Array, Object],
+    required: true,
+  },
 })
 
 // ===== Текущий пользователь (через Inertia usePage)
@@ -46,9 +49,16 @@ const pendingNoteOf = (m) => {
 }
 
 // ===== Справочники для фильтров
+const matchItems = computed(() => {
+  if (Array.isArray(props.matches)) {
+    return props.matches
+  }
+  return props.matches?.data ?? []
+})
+
 const tournaments = computed(() => {
   const map = new Map()
-  for (const m of props.matches) {
+  for (const m of matchItems.value) {
     const t = m?.stage?.tournament
     if (t && !map.has(t.id)) {
       map.set(t.id, { id: t.id, title: t.title })
@@ -59,7 +69,7 @@ const tournaments = computed(() => {
 
 const opponents = computed(() => {
   const map = new Map()
-  for (const m of props.matches) {
+  for (const m of matchItems.value) {
     const opp = opponentOf(m)
     if (!opp) continue
 
@@ -80,7 +90,7 @@ const opponents = computed(() => {
 
 const statuses = computed(() => {
   const set = new Set()
-  for (const m of props.matches) {
+  for (const m of matchItems.value) {
     if (m?.status) set.add(m.status) // scheduled / reported / confirmed
   }
   return Array.from(set)
@@ -189,7 +199,7 @@ function resetFilters() {
 
 // ===== Итоговый список с учётом всех фильтров
 const filteredMatches = computed(() => {
-  let rows = props.matches.slice()
+  let rows = matchItems.value.slice()
 
   // Фильтр по турниру
   if (q.tournamentId !== 'all') {
@@ -226,6 +236,19 @@ if (q.opponentId !== 'all') {
 const isAutoConfirmed = (m) => {
   return !!(m.meta && m.meta.auto_confirmed)
 }
+
+const paginationLabel = (link) => {
+  if (!link || !link.label) return ''
+
+  if (link.label === 'pagination.previous') {
+    return '‹ Предыдущая'
+  }
+  if (link.label === 'pagination.next') {
+    return 'Следующая ›'
+  }
+
+  return link.label
+}
 </script>
 
 
@@ -238,7 +261,7 @@ const isAutoConfirmed = (m) => {
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
           <!-- Если вообще есть матчи — показываем фильтры -->
-          <template v-if="matches.length">
+          <template v-if="matchItems.length">
 
             <!-- Фильтры -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border p-4 space-y-3 mb-4">
@@ -429,6 +452,51 @@ const isAutoConfirmed = (m) => {
 					</Link>
 					</div>
               </div>
+            </div>
+
+            <!-- Пагинация -->
+            <div
+              v-if="matches && Array.isArray(matches.links) && matches.links.length > 1"
+              class="mt-4 border border-gray-200 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 bg-gray-50 rounded-lg"
+            >
+              <div class="text-xs text-gray-500">
+                Страница
+                <strong>{{ matches.current_page }}</strong>
+                из
+                <strong>{{ matches.last_page }}</strong>
+                <span v-if="matches && matches.total">
+                  · Всего матчей: {{ matches.total }}
+                </span>
+              </div>
+
+              <nav class="inline-flex -space-x-px rounded-md shadow-sm overflow-hidden">
+                <template
+                  v-for="(link, idx) in (Array.isArray(matches.links) ? matches.links : [])"
+                  :key="idx"
+                >
+                  <Link
+                    v-if="link && link.url"
+                    :href="link.url"
+                    preserve-state
+                    preserve-scroll
+                    class="relative inline-flex items-center px-3 py-1.5 border text-xs font-medium"
+                    :class="[
+                      link.active
+                        ? 'z-10 bg-slate-800 border-slate-800 text-white'
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50',
+                    ]"
+                  >
+                    {{ paginationLabel(link) }}
+                  </Link>
+
+                  <span
+                    v-else
+                    class="relative inline-flex items-center px-3 py-1.5 border border-gray-200 bg-gray-50 text-xs font-medium text-gray-400"
+                  >
+                    {{ paginationLabel(link) }}
+                  </span>
+                </template>
+              </nav>
             </div>
 
             <!-- Нет результатов по фильтрам -->
