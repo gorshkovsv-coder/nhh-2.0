@@ -414,7 +414,7 @@ const playerResultClass = (side, match) => {
             </div>
             <div class="min-w-0">
               <p class="text-xs font-semibold text-gray-900 break-words leading-tight">
-                {{ m.home_team_name || 'HOME' }}
+                {{ m.home_team_name || 'Команда' }}
               </p>
               <p class="text-[11px] text-gray-500 break-words leading-tight">
                 {{ m.home_player_name || 'Игрок' }}
@@ -429,7 +429,7 @@ const playerResultClass = (side, match) => {
           <div class="flex items-center gap-2 min-w-0 sm:flex-row-reverse sm:text-right">
             <div class="min-w-0">
               <p class="text-xs font-semibold text-gray-900 break-words leading-tight">
-                {{ m.away_team_name || 'AWAY' }}
+                {{ m.away_team_name || 'Команда' }}
               </p>
               <p class="text-[11px] text-gray-500 break-words leading-tight">
                 {{ m.away_player_name || 'Игрок' }}
