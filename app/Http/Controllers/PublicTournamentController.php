@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 
 class PublicTournamentController extends Controller
 {
-    public function show(Tournament $tournament)
+	public function show(Tournament $tournament)
 {
 	$tournament->load([
 		'participants.nhlTeam',
@@ -60,89 +60,7 @@ class PublicTournamentController extends Controller
         ];
     };
 
-// === Турнирные таблицы для всех стадий типа "group" (Регулярка) ===
-$groupStages = $tournament->stages->where('type', 'group')->values();
-$groupTables = [];
-
-foreach ($groupStages as $gs) {
-
-    // 1) standings этой стадии -> по participant_id
-    $stByPid = \DB::table('standings')
-        ->where('stage_id', $gs->id)
-        ->select('participant_id','gp','w','otw','sow','otl','sol','l','gf','ga','gd','points','tech_losses')
-        ->get()
-        ->keyBy('participant_id');
-
-    // 2) Плановое количество игр для каждого участника на этой стадии (по сетке матчей)
-    //    Берём все матчи этой стадии и считаем, сколько раз каждый participant_id встречается
-    $plannedByPid = collect($gs->matches ?? [])
-        ->flatMap(function ($m) {
-            return [
-                (int) $m->home_participant_id,
-                (int) $m->away_participant_id,
-            ];
-        })
-        ->countBy()
-        ->map(fn ($cnt) => (int) $cnt);
-
-    // 3) все участники турнира (покажем даже тех, у кого пока нет строки в standings)
-    $allParticipants = $tournament->participants;
-
-    // 4) собираем строки; если в standings нет — отдадим нули
-    $rows = [];
-    foreach ($allParticipants as $p) {
-        $pid = (int) $p->id;
-        $s   = $stByPid->get($pid);
-        $mp  = $mapParticipant($p);
-
-        $rows[] = [
-            'participant_id' => $pid,
-            'user_id'        => $mp['user_id'] ?? null,
-            // Имя игрока
-            'name'           => $mp['display_name'] ?? ('#' . $pid),
-            // Команда (логотип + название)
-            'team'           => $mp['team'] ?? null,
-
-            'gp'         => (int)($s->gp         ?? 0),
-            // Новое поле: сколько игр запланировано на этой стадии для участника
-            'gp_planned' => (int)($plannedByPid->get($pid) ?? 0),
-
-            'w'          => (int)($s->w          ?? 0),
-            'otw'        => (int)($s->otw        ?? 0),
-            'sow'        => (int)($s->sow        ?? 0),
-            'otl'        => (int)($s->otl        ?? 0),
-            'sol'        => (int)($s->sol        ?? 0),
-            'l'          => (int)($s->l          ?? 0),
-            'gf'         => (int)($s->gf         ?? 0),
-            'ga'         => (int)($s->ga         ?? 0),
-            'gd'         => (int)($s->gd         ?? 0),
-            'points'     => (int)($s->points     ?? 0),
-            'tech_losses'=> (int)($s->tech_losses ?? 0),
-        ];
-    }
-
-    // 5) сортировка (очки → +/- → забитые, как раньше)
-    usort($rows, fn($a, $b) =>
-        [$b['points'], $b['gd'], $b['gf'], $a['participant_id']]
-        <=>
-        [$a['points'], $a['gd'], $a['gf'], $b['participant_id']]
-    );
-
-    // 6) назначаем позиции
-    $tableRows = [];
-    $pos = 1;
-    foreach ($rows as $r) {
-        $r['pos'] = $pos++;
-        $tableRows[] = $r;
-    }
-
-    $groupTables[] = [
-        'stage_id'   => $gs->id,
-        'stage_name' => $gs->name ?? 'Регулярка',
-        'rows'       => $tableRows,
-        'head_to_head' => $this->buildHeadToHeadMatrix($gs, $tableRows),
-    ];
-}
+    $groupTables = $this->buildGroupTables($tournament, false);
 
 
     // === Сетка плей-офф (как было) ===
@@ -298,6 +216,147 @@ foreach ($groupStages as $gs) {
 	
 }
 
+public function headToHead(Tournament $tournament)
+{
+    $tournament->load([
+        'participants.nhlTeam',
+        'stages' => fn ($q) => $q->orderBy('order'),
+        'stages.matches' => fn ($q) => $q
+            ->with(['reports' => function ($q) {
+                $q->latest('created_at');
+            }])
+            ->orderBy('home_participant_id')
+            ->orderBy('away_participant_id')
+            ->orderBy('game_no'),
+    ]);
+
+    $groupTables = $this->buildGroupTables($tournament, true);
+
+    return Inertia::render('Tournament/HeadToHead', [
+        'tournament'  => $tournament,
+        'groupTables' => $groupTables,
+    ]);
+}
+
+private function buildGroupTables(Tournament $tournament, bool $includeHeadToHead): array
+{
+    // Участники по id для быстрых отображаемых имён
+    $pById = $tournament->participants->keyBy('id');
+
+    // Нормализованный участник для фронта (Игрок + Команда)
+    $mapParticipant = function ($p) {
+        if (!$p) {
+            return null;
+        }
+
+        $team = $p->nhlTeam;
+
+        return [
+            'id'           => $p->id,
+            'user_id'      => $p->user_id,
+            'display_name' => $p->display_name,
+            'nhl_team_id'  => $p->nhl_team_id,
+            'team'         => $team ? [
+                'id'       => $team->id,
+                'code'     => $team->code,
+                'name'     => $team->name,
+                'logo_url' => $team->logo_url,
+            ] : null,
+        ];
+    };
+
+    // === Турнирные таблицы для всех стадий типа "group" (Регулярка) ===
+    $groupStages = $tournament->stages->where('type', 'group')->values();
+    $groupTables = [];
+
+    foreach ($groupStages as $gs) {
+
+        // 1) standings этой стадии -> по participant_id
+        $stByPid = \DB::table('standings')
+            ->where('stage_id', $gs->id)
+            ->select('participant_id','gp','w','otw','sow','otl','sol','l','gf','ga','gd','points','tech_losses')
+            ->get()
+            ->keyBy('participant_id');
+
+        // 2) Плановое количество игр для каждого участника на этой стадии (по сетке матчей)
+        //    Берём все матчи этой стадии и считаем, сколько раз каждый participant_id встречается
+        $plannedByPid = collect($gs->matches ?? [])
+            ->flatMap(function ($m) {
+                return [
+                    (int) $m->home_participant_id,
+                    (int) $m->away_participant_id,
+                ];
+            })
+            ->countBy()
+            ->map(fn ($cnt) => (int) $cnt);
+
+        // 3) все участники турнира (покажем даже тех, у кого пока нет строки в standings)
+        $allParticipants = $tournament->participants;
+
+        // 4) собираем строки; если в standings нет — отдадим нули
+        $rows = [];
+        foreach ($allParticipants as $p) {
+            $pid = (int) $p->id;
+            $s   = $stByPid->get($pid);
+            $mp  = $mapParticipant($p);
+
+            $rows[] = [
+                'participant_id' => $pid,
+                'user_id'        => $mp['user_id'] ?? null,
+                // Имя игрока
+                'name'           => $mp['display_name'] ?? ('#' . $pid),
+                // Команда (логотип + название)
+                'team'           => $mp['team'] ?? null,
+
+                'gp'         => (int)($s->gp         ?? 0),
+                // Новое поле: сколько игр запланировано на этой стадии для участника
+                'gp_planned' => (int)($plannedByPid->get($pid) ?? 0),
+
+                'w'          => (int)($s->w          ?? 0),
+                'otw'        => (int)($s->otw        ?? 0),
+                'sow'        => (int)($s->sow        ?? 0),
+                'otl'        => (int)($s->otl        ?? 0),
+                'sol'        => (int)($s->sol        ?? 0),
+                'l'          => (int)($s->l          ?? 0),
+                'gf'         => (int)($s->gf         ?? 0),
+                'ga'         => (int)($s->ga         ?? 0),
+                'gd'         => (int)($s->gd         ?? 0),
+                'points'     => (int)($s->points     ?? 0),
+                'tech_losses'=> (int)($s->tech_losses ?? 0),
+            ];
+        }
+
+        // 5) сортировка (очки → +/- → забитые, как раньше)
+        usort($rows, fn($a, $b) =>
+            [$b['points'], $b['gd'], $b['gf'], $a['participant_id']]
+            <=>
+            [$a['points'], $a['gd'], $a['gf'], $b['participant_id']]
+        );
+
+        // 6) назначаем позиции
+        $tableRows = [];
+        $pos = 1;
+        foreach ($rows as $r) {
+            $r['pos'] = $pos++;
+            $tableRows[] = $r;
+        }
+
+        $table = [
+            'stage_id'   => $gs->id,
+            'stage_name' => $gs->name ?? 'Регулярка',
+            'rows'       => $tableRows,
+        ];
+
+        if ($includeHeadToHead) {
+            $table['head_to_head'] = $this->buildHeadToHeadMatrix($gs, $tableRows);
+        }
+
+        $groupTables[] = $table;
+    }
+
+    return $groupTables;
+}
+
 private function buildHeadToHeadMatrix($stage, array $tableRows): array
 {
     if (empty($tableRows)) {
@@ -352,6 +411,7 @@ private function buildHeadToHeadMatrix($stage, array $tableRows): array
     $headerParticipants = array_map(function ($row) {
         return [
             'participant_id' => $row['participant_id'],
+            'pos' => $row['pos'] ?? null,
             'name' => $row['name'],
             'team' => $row['team'],
         ];
@@ -382,6 +442,7 @@ private function buildHeadToHeadMatrix($stage, array $tableRows): array
         $rows[] = [
             'participant' => [
                 'participant_id' => $rowId,
+                'pos' => $row['pos'] ?? null,
                 'name' => $row['name'],
                 'team' => $row['team'],
             ],
