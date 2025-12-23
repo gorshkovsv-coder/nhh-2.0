@@ -17,6 +17,9 @@ class PublicTournamentController extends Controller
 		'participants.nhlTeam',
 		'stages' => fn ($q) => $q->orderBy('order'),
 		'stages.matches' => fn ($q) => $q
+			->with(['reports' => function ($q) {
+				$q->latest('created_at');
+			}])
 			->orderBy('home_participant_id')
 			->orderBy('away_participant_id')
 			->orderBy('game_no'),
