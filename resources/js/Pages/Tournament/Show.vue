@@ -158,6 +158,70 @@
               </tbody>
             </table>
           </div>
+
+          <div
+            v-if="gt.head_to_head?.rows?.length"
+            class="mt-4"
+          >
+            <div class="text-sm font-semibold text-gray-900 mb-2">
+              Личные встречи
+            </div>
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-xs border border-slate-200">
+                <thead class="bg-slate-50 text-gray-600">
+                  <tr>
+                    <th class="px-2 py-1 text-left">
+                      Игрок
+                    </th>
+                    <th
+                      v-for="p in gt.head_to_head.participants"
+                      :key="p.participant_id"
+                      class="px-2 py-1 text-center whitespace-nowrap"
+                    >
+                      {{ p.name }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y">
+                  <tr
+                    v-for="row in gt.head_to_head.rows"
+                    :key="row.participant.participant_id"
+                  >
+                    <td class="px-2 py-1 text-left whitespace-nowrap">
+                      <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded bg-slate-100 flex items-center justify-center overflow-hidden">
+                          <img
+                            v-if="row.participant.team?.logo_url"
+                            :src="row.participant.team.logo_url"
+                            :alt="row.participant.team.name"
+                            class="w-full h-full object-contain"
+                          />
+                          <span v-else class="text-[9px] text-slate-400">
+                            —
+                          </span>
+                        </div>
+                        <span class="text-xs text-gray-700">
+                          {{ row.participant.name }}
+                        </span>
+                      </div>
+                    </td>
+                    <td
+                      v-for="(cell, ci) in row.cells"
+                      :key="ci"
+                      class="px-2 py-1 text-center"
+                    >
+                      <span
+                        class="inline-flex min-w-[46px] items-center justify-center rounded-md px-2 py-1"
+                        :class="headToHeadCellClass(cell)"
+                      >
+                        {{ cell.value }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 		
  <div
@@ -398,6 +462,21 @@ const siPercent = (row) => {
 
   const val = (gp / planned) * 100
   return Math.min(100, Math.round(val)) // не даём выйти за 100%
+}
+
+const headToHeadCellClass = (cell) => {
+  switch (cell?.result) {
+    case 'win':
+      return 'bg-emerald-50 text-emerald-700'
+    case 'loss':
+      return 'bg-rose-50 text-rose-700'
+    case 'draw':
+      return 'bg-slate-100 text-slate-700'
+    case 'self':
+      return 'bg-slate-200 text-slate-400'
+    default:
+      return 'bg-white text-slate-400 border border-slate-200'
+  }
 }
 
 
