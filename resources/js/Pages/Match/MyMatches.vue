@@ -1,13 +1,29 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import StatusBadge from '@/Components/StatusBadge.vue'
-import { Head, Link, usePage } from '@inertiajs/vue3'
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { reactive, computed, watch } from 'vue'
 
 const props = defineProps({
   matches: {
     type: [Array, Object],
     required: true,
+  },
+  tournaments: {
+    type: Array,
+    default: () => [],
+  },
+  opponents: {
+    type: Array,
+    default: () => [],
+  },
+  statuses: {
+    type: Array,
+    default: () => [],
+  },
+  filters: {
+    type: Object,
+    default: () => ({}),
   },
 })
 
@@ -56,121 +72,47 @@ const matchItems = computed(() => {
   return props.matches?.data ?? []
 })
 
-const tournaments = computed(() => {
-  const map = new Map()
-  for (const m of matchItems.value) {
-    const t = m?.stage?.tournament
-    if (t && !map.has(t.id)) {
-      map.set(t.id, { id: t.id, title: t.title })
-    }
-  }
-  return Array.from(map.values())
-})
-
-const opponents = computed(() => {
-  const map = new Map()
-  for (const m of matchItems.value) {
-    const opp = opponentOf(m)
-    if (!opp) continue
-
-    const team = opp?.nhl_team
-    if (!team) continue
-
-    const id = team.id
-    const name = team.name || 'Без команды'
-
-    if (id && !map.has(id)) {
-      map.set(id, { id, name })
-    }
-  }
-
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'ru'))
-})
-
-
-const statuses = computed(() => {
-  const set = new Set()
-  for (const m of matchItems.value) {
-    if (m?.status) set.add(m.status) // scheduled / reported / confirmed
-  }
-  return Array.from(set)
-})
-
 // ===== Состояние фильтров
 const q = reactive({
-  tournamentId: 'all',
-  opponentId: 'all',
-  status: 'all',
+  tournamentId: props.filters?.tournament_id ?? 'all',
+  opponentId: props.filters?.opponent_team_id ?? 'all',
+  status: props.filters?.status ?? 'all',
 })
 
 const quick = reactive({
-  awaiting: false,  // Ждёт моего подтверждения
-  notPlayed: false, // Запланирован (ещё не сыграно)
+  awaiting: props.filters?.awaiting ?? false,  // Ждёт моего подтверждения
+  notPlayed: props.filters?.not_played ?? false, // Запланирован (ещё не сыграно)
 })
 
-// ===== Сохранение фильтров между переходами (localStorage)
-const FILTERS_STORAGE_KEY = 'myMatches.filters'
-
-const loadFiltersFromStorage = () => {
-  if (typeof window === 'undefined') return
-
-  try {
-    const raw = window.localStorage.getItem(FILTERS_STORAGE_KEY)
-    if (!raw) return
-
-    const saved = JSON.parse(raw)
-
-    if (saved?.q) {
-      q.tournamentId = saved.q.tournamentId ?? q.tournamentId
-      q.opponentId   = saved.q.opponentId ?? q.opponentId
-      q.status       = saved.q.status ?? q.status
+const applyFilters = () => {
+  router.get(
+    route('my.matches'),
+    {
+      tournament_id: q.tournamentId !== 'all' ? q.tournamentId : undefined,
+      opponent_team_id: q.opponentId !== 'all' ? q.opponentId : undefined,
+      status: q.status !== 'all' ? q.status : undefined,
+      awaiting: quick.awaiting ? 1 : undefined,
+      not_played: quick.notPlayed ? 1 : undefined,
+    },
+    {
+      preserveScroll: true,
+      preserveState: true,
+      replace: true,
     }
-
-    if (saved?.quick) {
-      quick.awaiting  = !!saved.quick.awaiting
-      quick.notPlayed = !!saved.quick.notPlayed
-    }
-  } catch (e) {
-    console.warn('Не удалось загрузить фильтры myMatches', e)
-  }
+  )
 }
 
-const saveFiltersToStorage = () => {
-  if (typeof window === 'undefined') return
-
-  try {
-    const payload = {
-      q: {
-        tournamentId: q.tournamentId,
-        opponentId: q.opponentId,
-        status: q.status,
-      },
-      quick: {
-        awaiting: quick.awaiting,
-        notPlayed: quick.notPlayed,
-      },
-    }
-
-    window.localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(payload))
-  } catch (e) {
-    console.warn('Не удалось сохранить фильтры myMatches', e)
-  }
-}
-
-// При первом заходе на страницу поднимаем фильтры из localStorage
-onMounted(() => {
-  loadFiltersFromStorage()
-})
-
-// Следим за изменениями фильтров и сохраняем их
 watch(
-  [q, quick],
-  () => {
-    saveFiltersToStorage()
+  () => props.filters,
+  (next) => {
+    q.tournamentId = next?.tournament_id ?? 'all'
+    q.opponentId = next?.opponent_team_id ?? 'all'
+    q.status = next?.status ?? 'all'
+    quick.awaiting = next?.awaiting ?? false
+    quick.notPlayed = next?.not_played ?? false
   },
   { deep: true }
 )
-
 
 function toggleAwaiting() {
   quick.awaiting = !quick.awaiting
@@ -178,6 +120,7 @@ function toggleAwaiting() {
     quick.notPlayed = false
     q.status = 'all'
   }
+  applyFilters()
 }
 
 function toggleNotPlayed() {
@@ -186,6 +129,7 @@ function toggleNotPlayed() {
     quick.awaiting = false
     q.status = 'all'
   }
+  applyFilters()
 }
 
 function resetFilters() {
@@ -194,43 +138,7 @@ function resetFilters() {
   q.status       = 'all'
   quick.awaiting = false
   quick.notPlayed = false
-  saveFiltersToStorage()
-}
-
-// ===== Итоговый список с учётом всех фильтров
-const filteredMatches = computed(() => {
-  let rows = matchItems.value.slice()
-
-  // Фильтр по турниру
-  if (q.tournamentId !== 'all') {
-    rows = rows.filter(m => m?.stage?.tournament?.id === q.tournamentId)
-  }
-
-// Фильтр по сопернику (по команде)
-if (q.opponentId !== 'all') {
-  rows = rows.filter(m => {
-    const opp = opponentOf(m)
-    const teamId = opp?.nhl_team?.id
-    return teamId === q.opponentId
-  })
-}
-
-
-  // Быстрые фильтры
-  if (quick.awaiting) {
-    rows = rows.filter(m => {
-      const r = lastReportOf(m)
-      if (!r || r.status !== 'pending') return false
-      const mePid = myParticipantId(m)
-      return mePid ? r.reporter_participant_id !== mePid : false // ждёт МОЕГО подтверждения
-    })
-  } else if (quick.notPlayed) {
-    rows = rows.filter(m => m.status === 'scheduled')
-  } else if (q.status !== 'all') {
-    rows = rows.filter(m => m.status === q.status)
-  }
-
-  return rows
+  applyFilters()
 })
 
 const isAutoConfirmed = (m) => {
@@ -269,9 +177,13 @@ const paginationLabel = (link) => {
                 <!-- Турнир -->
                 <div>
                   <label class="block text-xs text-gray-500 mb-1">Турнир</label>
-                  <select v-model="q.tournamentId" class="w-full border rounded px-2 py-1">
+                  <select
+                    v-model="q.tournamentId"
+                    class="w-full border rounded px-2 py-1"
+                    @change="applyFilters"
+                  >
                     <option value="all">Все турниры</option>
-                    <option v-for="t in tournaments" :key="t.id" :value="t.id">
+                    <option v-for="t in props.tournaments" :key="t.id" :value="t.id">
                       {{ t.title }}
                     </option>
                   </select>
@@ -280,9 +192,13 @@ const paginationLabel = (link) => {
 <!-- Соперник -->
 <div>
   <label class="block text-xs text-gray-500 mb-1">Команда соперника</label>
-  <select v-model="q.opponentId" class="w-full border rounded px-2 py-1">
+  <select
+    v-model="q.opponentId"
+    class="w-full border rounded px-2 py-1"
+    @change="applyFilters"
+  >
     <option value="all">Все соперники</option>
-    <option v-for="p in opponents" :key="p.id" :value="p.id">
+    <option v-for="p in props.opponents" :key="p.id" :value="p.id">
       {{ p.name }}
     </option>
   </select>
@@ -294,10 +210,10 @@ const paginationLabel = (link) => {
                   <select
                     v-model="q.status"
                     class="w-full border rounded px-2 py-1"
-                    @change="quick = { awaiting:false, notPlayed:false }"
+                    @change="() => { quick.awaiting = false; quick.notPlayed = false; applyFilters() }"
                   >
                     <option value="all">Все статусы</option>
-                    <option v-for="s in statuses" :key="s" :value="s">
+                    <option v-for="s in props.statuses" :key="s" :value="s">
                       {{ s === 'reported'
                           ? 'Ожидает подтверждения'
                           : s === 'scheduled'
@@ -333,7 +249,10 @@ const paginationLabel = (link) => {
                 </button>
 
                 <div class="ml-auto flex items-center gap-3 text-sm text-gray-500">
-                  <span>Найдено: <b>{{ filteredMatches.length }}</b></span>
+                  <span>
+                    Найдено:
+                    <b>{{ matches?.total ?? matchItems.length }}</b>
+                  </span>
                   <button
                     type="button"
                     class="text-slate-600 hover:text-slate-900 underline"
@@ -346,9 +265,9 @@ const paginationLabel = (link) => {
             </div>
 
             <!-- Список матчей по фильтрам -->
-            <div v-if="filteredMatches.length" class="space-y-3">
+            <div v-if="matchItems.length" class="space-y-3">
 			  <div
-				v-for="m in filteredMatches"
+				v-for="m in matchItems"
 				:key="m.id"
 				class="bg-white overflow-hidden shadow-sm sm:rounded-lg border p-4
 						flex flex-col gap-4
