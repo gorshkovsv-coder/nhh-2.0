@@ -17,6 +17,9 @@ class PublicTournamentController extends Controller
 		'participants.nhlTeam',
 		'stages' => fn ($q) => $q->orderBy('order'),
 		'stages.matches' => fn ($q) => $q
+			->with(['reports' => function ($q) {
+				$q->latest('created_at');
+			}])
 			->orderBy('home_participant_id')
 			->orderBy('away_participant_id')
 			->orderBy('game_no'),
@@ -137,6 +140,7 @@ foreach ($groupStages as $gs) {
         'stage_id'   => $gs->id,
         'stage_name' => $gs->name ?? 'Регулярка',
         'rows'       => $tableRows,
+        'head_to_head' => $this->buildHeadToHeadMatrix($gs, $tableRows),
     ];
 }
 
@@ -292,6 +296,103 @@ foreach ($groupStages as $gs) {
     ],
 ]);
 	
+}
+
+private function buildHeadToHeadMatrix($stage, array $tableRows): array
+{
+    if (empty($tableRows)) {
+        return [
+            'participants' => [],
+            'rows' => [],
+        ];
+    }
+
+    $participants = array_values($tableRows);
+    $participantIds = array_map(fn ($row) => (int) $row['participant_id'], $participants);
+
+    $matrix = [];
+    foreach ($participantIds as $rowId) {
+        foreach ($participantIds as $colId) {
+            $matrix[$rowId][$colId] = null;
+        }
+    }
+
+    $matches = collect($stage->matches ?? [])
+        ->filter(fn ($match) => in_array($match->status, ['confirmed', 'reported', 'disputed'], true));
+
+    foreach ($matches as $match) {
+        $report = $match->reports?->first();
+        $scoreHome = $match->score_home ?? $report?->score_home;
+        $scoreAway = $match->score_away ?? $report?->score_away;
+
+        if ($scoreHome === null || $scoreAway === null) {
+            continue;
+        }
+
+        $homeId = (int) $match->home_participant_id;
+        $awayId = (int) $match->away_participant_id;
+
+        if (!isset($matrix[$homeId][$awayId])) {
+            continue;
+        }
+
+        $homeResult = $scoreHome > $scoreAway ? 'win' : ($scoreHome < $scoreAway ? 'loss' : 'draw');
+        $awayResult = $scoreAway > $scoreHome ? 'win' : ($scoreAway < $scoreHome ? 'loss' : 'draw');
+
+        $matrix[$homeId][$awayId] = [
+            'value' => "{$scoreHome}:{$scoreAway}",
+            'result' => $homeResult,
+        ];
+        $matrix[$awayId][$homeId] = [
+            'value' => "{$scoreAway}:{$scoreHome}",
+            'result' => $awayResult,
+        ];
+    }
+
+    $headerParticipants = array_map(function ($row) {
+        return [
+            'participant_id' => $row['participant_id'],
+            'name' => $row['name'],
+            'team' => $row['team'],
+        ];
+    }, $participants);
+
+    $rows = [];
+    foreach ($participants as $row) {
+        $rowId = (int) $row['participant_id'];
+        $cells = [];
+
+        foreach ($participants as $col) {
+            $colId = (int) $col['participant_id'];
+
+            if ($rowId === $colId) {
+                $cells[] = [
+                    'value' => '—',
+                    'result' => 'self',
+                ];
+                continue;
+            }
+
+            $cells[] = $matrix[$rowId][$colId] ?? [
+                'value' => '—',
+                'result' => null,
+            ];
+        }
+
+        $rows[] = [
+            'participant' => [
+                'participant_id' => $rowId,
+                'name' => $row['name'],
+                'team' => $row['team'],
+            ],
+            'cells' => $cells,
+        ];
+    }
+
+    return [
+        'participants' => $headerParticipants,
+        'rows' => $rows,
+    ];
 }
 
 public function matchesHistory(Tournament $tournament, Request $request)
