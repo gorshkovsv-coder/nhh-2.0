@@ -230,6 +230,7 @@ if (!$tournamentName) {
         // ===== Мои турниры (последние 5) =====
         $myTournaments = Tournament::query()
             ->with(['participants.nhlTeam'])
+            ->where('status', 'active')
             ->whereHas('participants', function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             })
@@ -321,6 +322,9 @@ Route::get('/tournaments/{tournament}', [PublicTournamentController::class, 'sho
 
 Route::get('/tournaments/{tournament}/matches', [PublicTournamentController::class, 'matchesHistory'])
     ->name('tournaments.matches-history');
+
+Route::get('/tournaments/{tournament}/head-to-head', [PublicTournamentController::class, 'headToHead'])
+    ->name('tournaments.head-to-head');
 	
 Route::get('/rating', [PlayerRatingController::class, 'index'])->name('players.rating');
 
