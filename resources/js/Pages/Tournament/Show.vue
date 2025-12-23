@@ -74,6 +74,13 @@
             История матчей
             <span class="ml-1">→</span>
           </Link>
+          <Link
+            :href="route('tournaments.head-to-head', tournament.id)"
+            class="inline-flex items-center text-sm font-medium text-sky-500 hover:text-sky-400 ml-4"
+          >
+            Личные встречи
+            <span class="ml-1">→</span>
+          </Link>
         </div>
 
       <!-- ===== Турнирная таблица(ы) Регулярки ===== -->
@@ -158,6 +165,7 @@
               </tbody>
             </table>
           </div>
+
         </div>
 		
  <div
@@ -399,7 +407,6 @@ const siPercent = (row) => {
   const val = (gp / planned) * 100
   return Math.min(100, Math.round(val)) // не даём выйти за 100%
 }
-
 
 /** Победитель строки в серии (жирное выделение) */
 const isWinner = (series, side) => {

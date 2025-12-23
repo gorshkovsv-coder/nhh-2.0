@@ -481,26 +481,6 @@ const playerResultClass = (side, match) => {
   </div>
 </section>
 
-        <!-- Панель администратора -->
-        <section v-if="isAdmin" class="bg-white shadow-sm sm:rounded-lg p-6">
-          <h2 class="text-lg font-semibold text-gray-900 mb-3">
-            Панель администратора
-          </h2>
-          <div class="flex flex-wrap gap-3">
-            <Link
-              href="/admin/tournaments"
-              class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-slate-800"
-            >
-              Управление турнирами
-            </Link>
-            <Link
-              href="/admin/nhl-teams"
-              class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-800 hover:bg-slate-50"
-            >
-              Реестр команд NHL
-            </Link>
-          </div>
-        </section>
       </div>
     </main>
   </AuthenticatedLayout>
