@@ -9,12 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Если таблица уже создана (например, руками/ранее),
-        // не падаем при повторном выполнении миграции.
-        if (Schema::hasTable('tournament_nhl_team')) {
-            return;
-        }
 
+	if (Schema::hasTable('tournament_nhl_team')) {
+	    return;
+	}
         Schema::create('tournament_nhl_team', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tournament_id')->constrained()->cascadeOnDelete();
@@ -27,6 +25,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('tournament_nhl_team');
+
+	Schema::dropIfExists('tournament_nhl_team');
     }
 };

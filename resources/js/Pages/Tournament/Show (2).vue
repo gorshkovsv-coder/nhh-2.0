@@ -2,15 +2,7 @@
   <AuthenticatedLayout>
     <Head :title="tournament.title" />
 	<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      <h1 class="text-2xl font-bold flex items-center gap-3">
-        <img
-          v-if="tournament.logo_url"
-          :src="tournament.logo_url"
-          alt=""
-          class="w-10 h-10 rounded-lg object-contain border bg-white"
-        />
-        <span>{{ tournament.title }}</span>
-      </h1>
+      <h1 class="text-2xl font-bold">{{ tournament.title }}</h1>
 
 <!-- HERO / ПАСПОРТ -->
 <div class="bg-white shadow-sm rounded-2xl p-5 border">
@@ -167,38 +159,7 @@
             </table>
           </div>
         </div>
-		
- <div
-    class="mt-3 text-xs text-gray-600 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1"
-  >
-    <div class="font-semibold text-gray-700 uppercase tracking-wide text-[10px] mb-1">
-      Глоссарий показателей
-    </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
-      <div><span class="font-semibold">#</span> — место в турнирной таблице.</div>
-      <div><span class="font-semibold">Игрок</span> — ник игрока и его команда.</div>
-      <div><span class="font-semibold">И</span> — сыгранные матчи на этой стадии.</div>
-      <div><span class="font-semibold">В</span> — победы в основное время.</div>
-      <div><span class="font-semibold">ВОТ</span> — победы в овертайме.</div>
-      <div><span class="font-semibold">ВБ</span> — победы по буллитам.</div>
-      <div><span class="font-semibold">ПОТ</span> — поражения в овертайме.</div>
-      <div><span class="font-semibold">ПБ</span> — поражения по буллитам.</div>
-      <div><span class="font-semibold">П</span> — поражения в основное время.</div>
-      <div><span class="font-semibold">З</span> — заброшенные шайбы.</div>
-      <div><span class="font-semibold">П</span> — пропущенные шайбы.</div>
-      <div><span class="font-semibold">+/-</span> — разница шайб (З − П).</div>
-      <div><span class="font-semibold">Win%</span> — процент выигранных матчей (все победы / И).</div>
-      <div>
-        <span class="font-semibold">СИ%</span> — процент сыгранных матчей от числа запланированных на
-        этой стадии.
       </div>
-      <div>
-        <span class="font-semibold">Очки</span> — турнирные очки по правилам турнира
-        (2 за победу, 1 за поражение в ОТ/Б, 0 за поражение в основное время).
-      </div>
-    </div>
-  </div>
-</div>
 
       <!-- ===== Плей-офф ===== -->
       <div v-if="bracketColumns && bracketColumns.length" class="bg-white shadow-sm rounded-xl p-4">
@@ -308,7 +269,6 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { ref } from 'vue'
 import { computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
-import { formatDate } from '@/utils/datetime'
 
 
 const props = defineProps({
@@ -355,7 +315,7 @@ const formatLabel = computed(() =>
 // Дата создания
 const createdAt = computed(() => {
   const d = props.tournament?.created_at
-  return d ? formatDate(d) : '—'
+  return d ? new Date(d).toLocaleDateString('ru-RU') : '—'
 })
 
 // Карта статусов → человекочитаемые подписи

@@ -2,15 +2,7 @@
   <AuthenticatedLayout>
     <Head :title="tournament.title" />
 	<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      <h1 class="text-2xl font-bold flex items-center gap-3">
-        <img
-          v-if="tournament.logo_url"
-          :src="tournament.logo_url"
-          alt=""
-          class="w-10 h-10 rounded-lg object-contain border bg-white"
-        />
-        <span>{{ tournament.title }}</span>
-      </h1>
+      <h1 class="text-2xl font-bold">{{ tournament.title }}</h1>
 
 <!-- HERO / ПАСПОРТ -->
 <div class="bg-white shadow-sm rounded-2xl p-5 border">
@@ -105,8 +97,6 @@
                   <th>З</th>
 				  <th>П</th>
 				  <th>+/-</th>
-				  <th>WIN%</th>
-				  <th>СИ%</th>
 				  <th>Очки</th>
                 </tr>
               </thead>
@@ -156,49 +146,16 @@
 				  <td>{{ r.otl }}</td>
 				  <td>{{ r.sol ?? 0 }}</td>  <!-- NEW -->
 				  <td>{{ r.l }}</td>
-				  <td>{{ r.gf }}</td>
+                  <td>{{ r.gf }}</td>
 				  <td>{{ r.ga }}</td>
-				  <td :class="r.gd >= 0 ? 'text-green-600' : 'text-red-600'">{{ r.gd }}</td>
-				  <td>{{ winPercent(r) }}%</td>
-				  <td>{{ siPercent(r) }}%</td>
-				  <td class="font-semibold">{{ r.points }}</td>
+                  <td :class="r.gd >= 0 ? 'text-green-600' : 'text-red-600'">{{ r.gd }}</td>
+                  <td class="font-semibold">{{ r.points }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
-		
- <div
-    class="mt-3 text-xs text-gray-600 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1"
-  >
-    <div class="font-semibold text-gray-700 uppercase tracking-wide text-[10px] mb-1">
-      Глоссарий показателей
-    </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
-      <div><span class="font-semibold">#</span> — место в турнирной таблице.</div>
-      <div><span class="font-semibold">Игрок</span> — ник игрока и его команда.</div>
-      <div><span class="font-semibold">И</span> — сыгранные матчи на этой стадии.</div>
-      <div><span class="font-semibold">В</span> — победы в основное время.</div>
-      <div><span class="font-semibold">ВОТ</span> — победы в овертайме.</div>
-      <div><span class="font-semibold">ВБ</span> — победы по буллитам.</div>
-      <div><span class="font-semibold">ПОТ</span> — поражения в овертайме.</div>
-      <div><span class="font-semibold">ПБ</span> — поражения по буллитам.</div>
-      <div><span class="font-semibold">П</span> — поражения в основное время.</div>
-      <div><span class="font-semibold">З</span> — заброшенные шайбы.</div>
-      <div><span class="font-semibold">П</span> — пропущенные шайбы.</div>
-      <div><span class="font-semibold">+/-</span> — разница шайб (З − П).</div>
-      <div><span class="font-semibold">Win%</span> — процент выигранных матчей (все победы / И).</div>
-      <div>
-        <span class="font-semibold">СИ%</span> — процент сыгранных матчей от числа запланированных на
-        этой стадии.
       </div>
-      <div>
-        <span class="font-semibold">Очки</span> — турнирные очки по правилам турнира
-        (2 за победу, 1 за поражение в ОТ/Б, 0 за поражение в основное время).
-      </div>
-    </div>
-  </div>
-</div>
 
       <!-- ===== Плей-офф ===== -->
       <div v-if="bracketColumns && bracketColumns.length" class="bg-white shadow-sm rounded-xl p-4">
@@ -308,7 +265,6 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { ref } from 'vue'
 import { computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
-import { formatDate } from '@/utils/datetime'
 
 
 const props = defineProps({
@@ -355,7 +311,7 @@ const formatLabel = computed(() =>
 // Дата создания
 const createdAt = computed(() => {
   const d = props.tournament?.created_at
-  return d ? formatDate(d) : '—'
+  return d ? new Date(d).toLocaleDateString('ru-RU') : '—'
 })
 
 // Карта статусов → человекочитаемые подписи
@@ -380,34 +336,6 @@ const statusBadgeClass = computed(() => {
     default:             return 'bg-gray-100 text-gray-600 ring-1 ring-inset ring-gray-200'
   }
 })
-
-// Процент побед: (все победы / сыгранные матчи) * 100
-const winPercent = (row) => {
-  const gp = Number(row.gp || 0)
-  if (!gp) return 0
-
-  const wins =
-    Number(row.w || 0) +
-    Number(row.otw || 0) +
-    Number(row.sow || 0)
-
-  const val = (wins / gp) * 100
-  return Math.round(val) // целое число процентов
-}
-
-// Процент сыгранных игр из запланированных на стадии
-const siPercent = (row) => {
-  const gp = Number(row.gp || 0)
-  const planned = Number(row.gp_planned || 0)
-
-  if (!planned || !gp) {
-    return 0
-  }
-
-  const val = (gp / planned) * 100
-  return Math.min(100, Math.round(val)) // не даём выйти за 100%
-}
-
 
 /** Победитель строки в серии (жирное выделение) */
 const isWinner = (series, side) => {

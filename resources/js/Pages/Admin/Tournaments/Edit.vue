@@ -39,6 +39,35 @@
             <input v-model="tForm.title" type="text" class="border rounded w-full px-3 py-2" />
           </div>
 
+          <div class="md:col-span-2">
+            <label class="block text-sm text-gray-700 mb-1">Логотип турнира</label>
+            <div class="flex items-center gap-4">
+              <img
+                v-if="logoPreview"
+                :src="logoPreview"
+                alt=""
+                class="w-16 h-16 rounded-lg object-contain border bg-white"
+              />
+              <div class="flex flex-col gap-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="onLogoChange"
+                  class="block text-sm text-gray-700"
+                />
+                <button
+                  v-if="tForm.logo"
+                  type="button"
+                  @click="clearLogo"
+                  class="px-3 py-1.5 rounded border text-sm hover:bg-gray-50 w-fit"
+                >
+                  Сбросить выбранный файл
+                </button>
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">PNG/JPG до 2 МБ.</p>
+          </div>
+
           <div>
             <label class="block text-sm text-gray-700 mb-1">Сезон</label>
             <input v-model.number="tForm.season" type="number" class="border rounded w-full px-3 py-2" />
@@ -392,7 +421,25 @@ const tForm = ref({
   season: props.tournament?.season ?? new Date().getFullYear(),
   format: props.tournament?.format ?? 'groups_playoff',
   status: props.tournament?.status ?? 'draft',
+  logo: null,
 })
+
+const logoPreview = ref(props.tournament?.logo_url ?? null)
+
+const onLogoChange = (event) => {
+  const file = event?.target?.files?.[0] ?? null
+  tForm.value.logo = file
+  if (file) {
+    logoPreview.value = URL.createObjectURL(file)
+  } else {
+    logoPreview.value = props.tournament?.logo_url ?? null
+  }
+}
+
+const clearLogo = () => {
+  tForm.value.logo = null
+  logoPreview.value = props.tournament?.logo_url ?? null
+}
 
 const stageList = computed(() => props.stages ?? [])
 const participantsList = ref([...(props.participants ?? [])])
@@ -458,13 +505,15 @@ const saveDraftTeams = () => {
 }
 
 const saveTournament = () => {
-  router.put(`/admin/tournaments/${tForm.value.id}`, {
+  router.post(`/admin/tournaments/${tForm.value.id}`, { _method: 'put',
     title:  (tForm.value.title ?? '').trim(),
     season: String(tForm.value.season ?? ''),     // в БД строка — отправляем строкой
     format: tForm.value.format,                   // groups_playoff | group_only | playoff
     status: tForm.value.status,                   // draft | registration | active | archived
+    logo:   tForm.value.logo,                     // File | null
   }, {
     preserveScroll: true,
+    forceFormData: true,
     onSuccess: () => {
       alert('Турнир сохранён')
     },

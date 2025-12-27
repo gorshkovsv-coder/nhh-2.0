@@ -11,7 +11,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use App\Models\NhlTeam;      // <-- ВАЖНО: именно так
 use App\Models\Standing;
@@ -106,28 +105,19 @@ class TournamentAdminController extends Controller
 
     public function store(Request $request)
     {
-        $this->ensureAdmin();
+    $data = $request->validate([
+        'title'  => ['nullable','string','max:255'],
+        'season' => ['nullable','integer'],
+        'format' => 'required|in:groups_playoff,group_only,playoff',
+		'status' => ['nullable','in:draft,registration,active,archived'],
+    ]);
 
-        $data = $request->validate([
-            'title'  => ['nullable', 'string', 'max:255'],
-            'season' => ['nullable', 'string', 'max:255'],
-            'format' => ['required', 'in:groups_playoff,group_only,playoff'],
-            'status' => ['nullable', 'in:draft,registration,active,archived'],
-            'logo'   => ['nullable', 'image', 'max:2048'], // 2MB
-        ]);
-
-        $t = new Tournament();
-        $t->title  = $data['title']  ?? 'Новый турнир';
-        $t->season = $data['season'] ?? now()->year;
-        $t->format = $data['format'];
-        $t->status = $data['status'] ?? 'draft';
-
-        // Логотип (опционально)
-        if (Schema::hasColumn('tournaments', 'logo_path') && $request->hasFile('logo')) {
-            $t->logo_path = $request->file('logo')->store('tournament-logos', 'public');
-        }
-
-        $t->save();
+    $t = new Tournament();
+    $t->title  = $data['title']  ?? 'Новый турнир';
+    $t->season = $data['season'] ?? now()->year;
+    $t->format = $data['format'] ?? 'groups_playoff';
+    $t->status = $data['status'] ?? 'draft';
+    $t->save();
 
     return redirect()->route('admin.tournaments.edit', $t)
         ->with('success', 'Турнир создан.');
@@ -137,16 +127,14 @@ class TournamentAdminController extends Controller
 
     public function update(\Illuminate\Http\Request $request, \App\Models\Tournament $tournament)
     {
-        $this->ensureAdmin();
-
         $data = $request->validate([
-            'title'  => ['nullable', 'string', 'max:255'],
-            'name'   => ['nullable', 'string', 'max:255'], // поддержка старых форм
-            'season' => ['nullable', 'string', 'max:255'],
-            'format' => ['required', 'in:groups_playoff,group_only,playoff'],
-            'status' => ['nullable', 'in:draft,registration,active,archived'],
-            'logo'   => ['nullable', 'image', 'max:2048'], // 2MB
-        ]);
+            'title'  => 'nullable|string|max:255',
+            'name'   => 'nullable|string|max:255',
+            'season' => 'nullable|string|max:255',
+			'format' => 'required|in:groups_playoff,group_only,playoff',
+			'status' => ['nullable','in:draft,registration,active,archived'],
+			'status' => 'nullable|in:draft,registration,active,archived',
+		]);
 
         // Название: поддержим обе схемы БД (title или name)
         if (\Illuminate\Support\Facades\Schema::hasColumn('tournaments', 'title')) {
@@ -165,18 +153,7 @@ class TournamentAdminController extends Controller
             $tournament->season = $data['season'] ?? $tournament->season;
         }
         $tournament->format = $data['format'];
-        if (array_key_exists('status', $data) && $data['status'] !== null) {
-            $tournament->status = $data['status'];
-        }
-
-        // Логотип (замена)
-        if (Schema::hasColumn('tournaments', 'logo_path') && $request->hasFile('logo')) {
-            // удаляем старый файл, если был
-            if (!empty($tournament->logo_path)) {
-                Storage::disk('public')->delete($tournament->logo_path);
-            }
-            $tournament->logo_path = $request->file('logo')->store('tournament-logos', 'public');
-        }
+        $tournament->status = $data['status'];
 
         $tournament->save();
 
@@ -407,16 +384,11 @@ public function runDraft(Request $request, Tournament $tournament)
                     'user_id'      => $participant->user_id,
                     'display_name' => $participant->display_name,
                 ],
-				
-				 'team' => [
-					'id'       => $team->id,
-					'code'     => $team->code,
-					'name'     => $team->name,
-					// подберите нужное поле под ваш проект:
-					// logo_url / logo / logo_path и т.п.
-					 'logo_url' => $team->logo_url ?? $team->logo ?? null,
-				],
-				
+                'team' => [
+                    'id'   => $team->id,
+                    'code' => $team->code,
+                    'name' => $team->name,
+                ],
             ];
         }
     });

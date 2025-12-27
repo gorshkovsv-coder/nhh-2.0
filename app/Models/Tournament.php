@@ -13,8 +13,21 @@ class Tournament extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title','season','format','settings','status'];
+    protected $fillable = ['title','season','format','settings','status','logo_path'];
     protected $casts = ['settings' => 'array'];
+
+    protected $appends = [
+        'logo_url',
+    ];
+
+    public function getLogoUrlAttribute(): ?string
+    {
+        if (!$this->logo_path) {
+            return null;
+        }
+
+        return asset('storage/' . $this->logo_path);
+    }
 
     /**
      * Активные участники турнира (для форм, сеток, таблиц).

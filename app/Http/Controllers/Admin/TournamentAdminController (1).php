@@ -11,7 +11,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use App\Models\NhlTeam;      // <-- ВАЖНО: именно так
 use App\Models\Standing;
@@ -46,8 +45,6 @@ class TournamentAdminController extends Controller
 	public function edit(Tournament $tournament)
 	{
     $this->ensureAdmin();
-	
-	$tournament->load('draftTeams');
 
     $stages = Stage::where('tournament_id', $tournament->id)
         ->orderBy('order')
@@ -94,7 +91,6 @@ class TournamentAdminController extends Controller
         'stages'       => $stages,
         'participants' => $participants,
         'nhlTeams'     => $nhlTeams,
-		'draftTeamIds' => $tournament->draftTeams->pluck('id'),
     ]);
 	}
 
@@ -106,28 +102,19 @@ class TournamentAdminController extends Controller
 
     public function store(Request $request)
     {
-        $this->ensureAdmin();
+    $data = $request->validate([
+        'title'  => ['nullable','string','max:255'],
+        'season' => ['nullable','integer'],
+        'format' => 'required|in:groups_playoff,group_only,playoff',
+		'status' => ['nullable','in:draft,registration,active,archived'],
+    ]);
 
-        $data = $request->validate([
-            'title'  => ['nullable', 'string', 'max:255'],
-            'season' => ['nullable', 'string', 'max:255'],
-            'format' => ['required', 'in:groups_playoff,group_only,playoff'],
-            'status' => ['nullable', 'in:draft,registration,active,archived'],
-            'logo'   => ['nullable', 'image', 'max:2048'], // 2MB
-        ]);
-
-        $t = new Tournament();
-        $t->title  = $data['title']  ?? 'Новый турнир';
-        $t->season = $data['season'] ?? now()->year;
-        $t->format = $data['format'];
-        $t->status = $data['status'] ?? 'draft';
-
-        // Логотип (опционально)
-        if (Schema::hasColumn('tournaments', 'logo_path') && $request->hasFile('logo')) {
-            $t->logo_path = $request->file('logo')->store('tournament-logos', 'public');
-        }
-
-        $t->save();
+    $t = new Tournament();
+    $t->title  = $data['title']  ?? 'Новый турнир';
+    $t->season = $data['season'] ?? now()->year;
+    $t->format = $data['format'] ?? 'groups_playoff';
+    $t->status = $data['status'] ?? 'draft';
+    $t->save();
 
     return redirect()->route('admin.tournaments.edit', $t)
         ->with('success', 'Турнир создан.');
@@ -137,16 +124,14 @@ class TournamentAdminController extends Controller
 
     public function update(\Illuminate\Http\Request $request, \App\Models\Tournament $tournament)
     {
-        $this->ensureAdmin();
-
         $data = $request->validate([
-            'title'  => ['nullable', 'string', 'max:255'],
-            'name'   => ['nullable', 'string', 'max:255'], // поддержка старых форм
-            'season' => ['nullable', 'string', 'max:255'],
-            'format' => ['required', 'in:groups_playoff,group_only,playoff'],
-            'status' => ['nullable', 'in:draft,registration,active,archived'],
-            'logo'   => ['nullable', 'image', 'max:2048'], // 2MB
-        ]);
+            'title'  => 'nullable|string|max:255',
+            'name'   => 'nullable|string|max:255',
+            'season' => 'nullable|string|max:255',
+			'format' => 'required|in:groups_playoff,group_only,playoff',
+			'status' => ['nullable','in:draft,registration,active,archived'],
+			'status' => 'nullable|in:draft,registration,active,archived',
+		]);
 
         // Название: поддержим обе схемы БД (title или name)
         if (\Illuminate\Support\Facades\Schema::hasColumn('tournaments', 'title')) {
@@ -165,18 +150,7 @@ class TournamentAdminController extends Controller
             $tournament->season = $data['season'] ?? $tournament->season;
         }
         $tournament->format = $data['format'];
-        if (array_key_exists('status', $data) && $data['status'] !== null) {
-            $tournament->status = $data['status'];
-        }
-
-        // Логотип (замена)
-        if (Schema::hasColumn('tournaments', 'logo_path') && $request->hasFile('logo')) {
-            // удаляем старый файл, если был
-            if (!empty($tournament->logo_path)) {
-                Storage::disk('public')->delete($tournament->logo_path);
-            }
-            $tournament->logo_path = $request->file('logo')->store('tournament-logos', 'public');
-        }
+        $tournament->status = $data['status'];
 
         $tournament->save();
 
@@ -281,173 +255,7 @@ class TournamentAdminController extends Controller
 
     return back(303)->with('success', 'Команды распределены случайным образом между участниками (без перезаписи уже назначенных).');
 	}
-	
-	    /**
-     * Страница интерактивной жеребьёвки команд.
-     */
-public function showDraft(Tournament $tournament)
-{
-    $this->ensureAdmin();
 
-    // Команды, выбранные для жеребьёвки (актуальный список)
-    $draftTeams = $tournament->draftTeams()
-        ->orderBy('code')
-        ->get();
-
-    // Результат последнего runDraft (распределение, посчитанное на сервере)
-    $assignments = session('draft_assignments', []);
-
-    if (!empty($assignments)) {
-        // Если жеребьёвка уже запущена, берём участников именно из assignments
-        $participantIds = collect($assignments)
-            ->pluck('participant.id')
-            ->unique()
-            ->all();
-
-        $participants = $tournament->participants()
-            ->whereIn('id', $participantIds)
-            ->with('user')
-            ->get()
-            // Сохраняем порядок такой же, как в assignments
-            ->sortBy(function ($p) use ($participantIds) {
-                return array_search($p->id, $participantIds, true);
-            })
-            ->values();
-    } else {
-        // Первый заход на страницу — показываем активных участников без команды
-        $participants = $tournament->participants()
-            ->where('is_active', true)
-            ->whereNull('nhl_team_id')
-            ->with('user')
-            ->orderBy('id')
-            ->get();
-    }
-
-    // Можно очистить сессию, чтобы assignments не "липли" между разными турами,
-    // но уже отрендеренная страница свои props получила.
-    session()->forget('draft_assignments');
-
-    return Inertia::render('Admin/Tournaments/Draft', [
-        'tournament'   => $tournament,
-        'participants' => $participants,
-        'draftTeams'   => $draftTeams,
-        'assignments'  => $assignments,
-    ]);
-}
-
-
-
-
-    /**
-     * Запускает жеребьёвку:
-     * случайно сопоставляет участников и команды и сохраняет результат.
-     * Возвращает assignments для анимации на фронте.
-     */
-public function runDraft(Request $request, Tournament $tournament)
-{
-    $this->ensureAdmin();
-
-    // 1) Берём только активных участников без команды
-    $participants = $tournament->participants()
-        ->where('is_active', true)
-        ->whereNull('nhl_team_id')
-        ->orderBy('id')
-        ->get();
-
-    if ($participants->isEmpty()) {
-        return back()->with('error', 'Нет участников без назначенной команды для жеребьёвки.');
-    }
-
-    // 2) Все команды, выбранные для этого турнира (актуальный список)
-    $allTeams = $tournament->draftTeams()->get();
-
-    // 3) Команды, которые уже кем-то заняты (чтобы не раздавать их повторно)
-    $usedTeamIds = $tournament->participants()
-        ->where('is_active', true)
-        ->whereNotNull('nhl_team_id')
-        ->pluck('nhl_team_id')
-        ->unique()
-        ->all();
-
-    // 4) Свободные команды = выбранные для турнира минус занятые
-    $availableTeams = $allTeams
-        ->when(
-            !empty($usedTeamIds),
-            fn ($collection) => $collection->whereNotIn('id', $usedTeamIds),
-            fn ($collection) => $collection
-        )
-        ->values();
-
-    if ($availableTeams->count() < $participants->count()) {
-        return back()->with(
-            'error',
-            'Свободных команд меньше, чем участников без команды. Добавьте команды в списке для жеребьёвки.'
-        );
-    }
-
-    // 5) Фиксируем порядок участников, команды перемешиваем (рандом)
-    $participants   = $participants->values();
-    $shuffledTeams  = $availableTeams->shuffle()->values();
-
-    $assignments = [];
-
-    DB::transaction(function () use ($participants, $shuffledTeams, &$assignments) {
-        foreach ($participants as $index => $participant) {
-            /** @var \App\Models\TournamentParticipant $participant */
-            /** @var \App\Models\NhlTeam $team */
-            $team = $shuffledTeams[$index];
-
-            // Назначаем команду участнику
-            $participant->nhl_team_id = $team->id;
-            $participant->save();
-
-            $assignments[] = [
-                'participant' => [
-                    'id'           => $participant->id,
-                    'user_id'      => $participant->user_id,
-                    'display_name' => $participant->display_name,
-                ],
-				
-				 'team' => [
-					'id'       => $team->id,
-					'code'     => $team->code,
-					'name'     => $team->name,
-					// подберите нужное поле под ваш проект:
-					// logo_url / logo / logo_path и т.п.
-					 'logo_url' => $team->logo_url ?? $team->logo ?? null,
-				],
-				
-            ];
-        }
-    });
-
-    // 6) Передаём результат на следующее отображение Draft.vue для анимации
-    session()->put('draft_assignments', $assignments);
-
-    return redirect()->route('admin.tournaments.draft.show', $tournament);
-}
-
-
-
-
-	    /**
-     * Сохранить список команд, участвующих в жеребьёвке турнира.
-     */
-    public function updateDraftTeams(Request $request, Tournament $tournament)
-    {
-        $this->ensureAdmin();
-
-        $data = $request->validate([
-            'team_ids'   => ['array'],
-            'team_ids.*' => ['integer', 'exists:nhl_teams,id'],
-        ]);
-
-        $teamIds = $data['team_ids'] ?? [];
-
-        $tournament->draftTeams()->sync($teamIds);
-
-        return back(303)->with('success', 'Список команд для жеребьёвки обновлён.');
-    }
 
 
     /* =========================

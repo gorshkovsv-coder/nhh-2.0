@@ -50,8 +50,15 @@ const fmtDate = (iso) => {
 				<div v-for="t in tournaments" :key="t.id" class="border rounded-lg p-4 mb-4 bg-white">
 				<div class="flex items-start justify-between gap-3">
 					<!-- ЛЕВАЯ колонка -->
-					<div>
-					<div class="text-lg font-semibold">{{ t.title }}</div>
+					<div class="flex items-start gap-3 min-w-0">
+						<div
+							v-if="t.logo_url"
+							class="w-12 h-12 rounded-lg overflow-hidden border bg-white shrink-0"
+						>
+							<img :src="t.logo_url" alt="" class="w-full h-full object-contain" />
+						</div>
+						<div class="min-w-0">
+							<div class="text-lg font-semibold truncate">{{ t.title }}</div>
 				
 					<div class="text-sm text-gray-600 mt-2">Сезон: {{ t.season ?? '—' }}</div>
 					<div class="text-sm text-gray-600">Формат: {{ FORMAT_LABELS[t.format] ?? t.format }}</div>
@@ -64,6 +71,7 @@ const fmtDate = (iso) => {
 							class="inline-block px-3 py-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-700">
 						Зарегистрироваться
 						</Link>
+						</div>
 					</div>
 					</div>
 				
